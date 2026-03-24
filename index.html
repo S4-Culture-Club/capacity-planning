@@ -368,6 +368,39 @@
   }
   .reset-days-btn:hover { background:rgba(91,155,245,0.25); }
 
+  /* ── Sprint period strip ── */
+  .sprint-period {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-top:14px; padding:10px 14px;
+    background:rgba(255,255,255,0.03); border:1px solid var(--border);
+    border-radius:9px; transition:all 0.3s;
+  }
+  .sprint-period.has-dates { border-color:rgba(255,255,255,0.1); }
+  .sprint-period-label {
+    font-size:0.67rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.08em; color:var(--text-muted); white-space:nowrap;
+  }
+  .sprint-period-dates {
+    display:flex; align-items:center; gap:8px; flex:1;
+  }
+  .sprint-date-chip {
+    font-family:'Outfit',sans-serif; font-size:0.85rem; font-weight:700;
+    color:var(--text); padding:3px 11px; border-radius:7px;
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1);
+    white-space:nowrap;
+  }
+  .sprint-date-arrow {
+    color:var(--text-muted); font-size:0.8rem; flex-shrink:0;
+  }
+  .sprint-duration-tag {
+    font-size:0.67rem; font-weight:700; padding:3px 9px; border-radius:6px;
+    background:var(--orange-dim); color:var(--orange);
+    border:1px solid rgba(255,114,30,0.25); white-space:nowrap; margin-left:auto;
+  }
+  .sprint-period-empty {
+    font-size:0.78rem; color:var(--text-muted); font-style:italic;
+  }
+
   /* ── date input styling ── */
   input[type="date"]::-webkit-calendar-picker-indicator { filter:invert(0.7) sepia(1) saturate(3) hue-rotate(340deg); cursor:pointer; opacity:0.7; }
   input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity:1; }
@@ -453,6 +486,7 @@
             </label>
           </div>
         </div>
+        <div class="sprint-period" id="rota-period"><span class="sprint-period-empty">Set a start date to see the sprint window</span></div>
         <div class="bh-panel" id="rota-bhPanel"></div>
       </div>
       <div class="glass-card">
@@ -526,6 +560,7 @@
             </label>
           </div>
         </div>
+        <div class="sprint-period" id="mobile-period"><span class="sprint-period-empty">Set a start date to see the sprint window</span></div>
         <div class="bh-panel" id="mobile-bhPanel"></div>
       </div>
       <div class="glass-card">
@@ -579,6 +614,7 @@
             </label>
           </div>
         </div>
+        <div class="sprint-period" id="payroll-period"><span class="sprint-period-empty">Set a start date to see the sprint window</span></div>
         <div class="bh-panel" id="payroll-bhPanel"></div>
       </div>
       <div class="glass-card">
@@ -850,6 +886,40 @@ function getEffectiveDays(member, teamSprintDays, bhDays) {
 }
 
 // ════════════════════════════════════════════════
+// SPRINT PERIOD (start → end date display)
+// ════════════════════════════════════════════════
+function updateSprintPeriod(tid) {
+  const team    = state.teams[tid];
+  const el      = document.getElementById(`${tid}-period`);
+  const startStr = team.startDate;
+
+  if (!startStr) {
+    el.className = 'sprint-period';
+    el.innerHTML = '<span class="sprint-period-empty">Set a start date to see the sprint window</span>';
+    return;
+  }
+
+  // End date = start + 13 calendar days (14-day window inclusive)
+  const start = parseDateLocal(startStr);
+  const end   = new Date(start);
+  end.setDate(end.getDate() + 13);
+
+  const fmtOpts = { weekday:'short', day:'numeric', month:'short', year:'numeric' };
+  const startFmt = start.toLocaleDateString('en-GB', fmtOpts);
+  const endFmt   = end.toLocaleDateString('en-GB', fmtOpts);
+
+  el.className = 'sprint-period has-dates';
+  el.innerHTML = `
+    <span class="sprint-period-label">Sprint window</span>
+    <div class="sprint-period-dates">
+      <span class="sprint-date-chip">📅 ${startFmt}</span>
+      <span class="sprint-date-arrow">→</span>
+      <span class="sprint-date-chip">📅 ${endFmt}</span>
+    </div>
+    <span class="sprint-duration-tag">14 days</span>`;
+}
+
+// ════════════════════════════════════════════════
 // BANK HOLIDAY PANEL RENDER
 // ════════════════════════════════════════════════
 function renderBHPanel(tid) {
@@ -1085,6 +1155,7 @@ function onConfigChange(tid) {
   label.textContent = team.useBankHols ? 'England' : 'Off';
 
   triggerAutoSave();
+  updateSprintPeriod(tid);
   renderBHPanel(tid);
   renderRows(tid,'dev');
   renderRows(tid,'qa');
@@ -1108,6 +1179,7 @@ function initTeam(tid) {
   document.getElementById(`${tid}-startDate`).value   = t.startDate  || '';
   document.getElementById(`${tid}-useBH`).checked     = t.useBankHols !== false;
   document.getElementById(`${tid}-bhToggleLabel`).textContent = (t.useBankHols !== false) ? 'England' : 'Off';
+  updateSprintPeriod(tid);
   renderBHPanel(tid);
   renderRows(tid,'dev');
   renderRows(tid,'qa');
